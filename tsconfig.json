@@ -2,10 +2,18 @@
   "compilerOptions": {
     "outDir": "lib/",
     "sourceMap": true,
+    "experimentalDecorators": true,
     "module": "commonjs",
     "moduleResolution": "node",
-    "noEmitOnError": true,
+
     "target": "es5",
+        "lib": [
+            "es5",
+            "es6",
+            "es2015",
+            "dom"
+        ],
+    
     "declaration": true,
     "noImplicitAny": true,
     "removeComments": true,
