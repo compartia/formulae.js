@@ -1,6 +1,6 @@
 {
   "name": "formulae.js",
-  "version": "1.0.0",
+  "version": "1.0.5",
   "description": "A js toolkit for rendering formulas",
   "homepage": "https://github.com/compartia/formulae.js",
   "author": "compartia@gmail.com",
@@ -8,7 +8,7 @@
     "lib",
     "src"
   ],
-  "main": "./lib/index.js",
+  "main": "./lib/formulae",
   "keywords": [
     "formula",
     "npm",
@@ -16,7 +16,7 @@
     "node",
     "javascript"
   ],
-  "typings": "lib/index.d.ts",
+  "typings": "./lib/formulae.d.ts",
   "scripts": {
     "test": "mocha --opts test/mocha.opts test/**/*.spec.ts",
     "lint": "eslint 'test/**/*.ts'",
@@ -43,8 +43,8 @@
     "eslint-plugin-typescript": "0.1.0",
     "mocha": "^3.1.0",
     "mocha-clean": "^1.0.0",
-    "ts-node": "^2.0.0",
-    "typescript": "2.2.2",
+    "ts-node": "2.1.2",
+    "typescript": "2.3.4",
     "typescript-eslint-parser": "2.1.0"
   }
 }

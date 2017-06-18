@@ -1,13 +1,22 @@
+
 export interface Formula {
     value: number;
-    equation(maxDepth?: number): string;
-    symEquation(maxDepth?: number): string;
+
+
     valueFormatted: string;
     name: string;
     description: string;
     format: (v: number) => string;
-    parent: Formula;
     terminal: boolean;
+    expanded: boolean;
+
+    isFunction: boolean;
+    dirty: boolean;
+
+    equation(maxDepth?: number): string;
+    symEquation(maxDepth?: number): string;
+
+    toggle(): void;
 }
 
 export class FormulaFactory {
@@ -55,40 +64,95 @@ export class FormulaFactory {
 }
 
 export abstract class AFormula implements Formula {
-    parent: Formula;
-    name: string;
+
+    _name: string;
     description: string;
     format: (v: number) => string;
     terminal: boolean;
+    _valueFormattedCached: string;
+    private _expanded: boolean;
+
+
+    public mul(b: Formula, format?: (v: number) => string, name?: string): Mul {
+        return new Mul(this, b, format, name);
+    }
+
+    public div(b: Formula, format?: (v: number) => string, name?: string): Div {
+        return new Div(this, b, format, name);
+    }
+
+    public plus(b: Formula, name?: string): Plus {
+        return new Plus(this, b, name);
+    }
+
+    public minus(b: Formula, name?: string): Minus {
+        return new Minus(this, b, name);
+    }
+
+    get isFunction() {
+        return false;
+    }
+
+    get expanded() {
+        return this._expanded;
+    }
+
+    set expanded(e: boolean) {
+        this._expanded = e;
+    }
+
+    public toggle() {
+        this._expanded = !this._expanded;
+    }
+
+    get name(): string {
+        return this._name ? this._name : this.valueFormatted;
+    }
+
+    set name(name: string) {
+        this._name = name;
+    }
 
     constructor() {
         this.format = (x: number) => '' + x;
     }
 
-    get valueFormatted() {
-        return this.format(this.value);
+    get valueFormatted(): string {
+        if (this.dirty) {
+            this._valueFormattedCached = this.format(this.value);
+        }
+        return this._valueFormattedCached;
+
     }
 
-    get value(): number {
-        throw 'abstract';
+    get dirty(): boolean{
+        throw "unimplemented";
     }
-
+    abstract get value(): number;
     abstract equation(maxDepth?: number): string;
     abstract symEquation(maxDepth?: number): string;
 
 }
 
-export class Constant extends AFormula {
+export abstract class Op extends AFormula {
+    args: Formula[];
 
+    get dirty(): boolean {
+        for (let a of this.args) {
+            if (a.dirty) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+export class Constant extends AFormula {
     private _value: number;
     
-    get value(): number {
-        return this._value;
-    }
-
     constructor(value: number, format: (v: number) => string, name?: string, description?: string) {
         super();
-        this._value = value;
+        this.value = value;
         if (format) {
             this.format = format;
         }
@@ -97,9 +161,41 @@ export class Constant extends AFormula {
         this.description = description;
     }
 
-    public shallowEquation(maxDepth: number): string {
-        return this.equation(maxDepth);
+    get value(): number {
+        return this._value;
     }
+
+    set value(value: number) {
+        if (this._value !== value) {
+            this._value = value;
+            this._valueFormattedCached = null;
+        }
+    }
+
+    get dirty(): boolean {
+        return this._valueFormattedCached === null;
+    }
+
+    // get valueFormatted() {
+    //     if (!this._valueFormatted) {
+    //         this._valueFormatted = this.format(this.value);
+    //     }
+    //     return this._valueFormatted;
+    // }
+
+    get isFunction(): boolean {
+        return false;
+    }
+
+    get expanded(): boolean {
+        return true;
+    }
+
+    get terminal(): boolean {
+        return true;
+    }
+
+
 
     public equation(maxDepth?: number): string {
         return this.format(this.value);
@@ -110,9 +206,9 @@ export class Constant extends AFormula {
     }
 }
 
-export class MulMul extends AFormula {
-    args: Formula[];
+export class MulMul extends Op {
 
+    op: string = '×';
     funcName: string;
 
     constructor(args: Formula[], format?: (v: number) => string, valueName?: string) {
@@ -128,20 +224,16 @@ export class MulMul extends AFormula {
         if (valueName) {
             this.name = valueName;
         } else {
-            let names: string[] = [];
+            let names = [];
             for (let a of this.args) {
                 names.push(a.name);
             }
 
             this.name = names.join(' × ');
         }
-
-
-        for (let a of args) {
-            a.parent = this;
-        }
-
     }
+
+
 
     get argValues(): number[] {
         let cargs: number[] = [];
@@ -168,7 +260,7 @@ export class MulMul extends AFormula {
             return this.name;
         }
 
-        let cargs: string[] = [];
+        let cargs = [];
         for (let a of this.args) {
             cargs.push(a.symEquation(maxDepth - 1));
         }
@@ -176,11 +268,16 @@ export class MulMul extends AFormula {
         return cargs.join(' × ');
     }
 }
-export class Func extends AFormula {
+export class Func extends Op {
 
-    args: Formula[];
+
     func: (args: number[]) => number;
     funcName: string;
+    op = ',';
+
+    get isFunction() {
+        return true;
+    }
 
     constructor(args: Formula[], func: (args: number[]) => number, format: (v: number) => string, valueName?: string, funcName?: string) {
         super();
@@ -196,9 +293,6 @@ export class Func extends AFormula {
             this.funcName = valueName;
         }
 
-        for (let a of args) {
-            a.parent = this;
-        }
 
     }
 
@@ -223,7 +317,7 @@ export class Func extends AFormula {
             return this.name;
         }
 
-        let cargs: string[] = [];
+        let cargs = [];
         for (let a of this.args) {
             cargs.push(a.symEquation(maxDepth - 1));
         }
@@ -233,23 +327,31 @@ export class Func extends AFormula {
 }
 
 
+export abstract class UnOp extends Op {
+}
 
-export abstract class BinOp extends AFormula {
-    a: Formula;
-    b: Formula;
+export abstract class BinOp extends Op {
+
     op: string;
+
+    get a() {
+        return this.args[0];
+    }
+
+    get b() {
+        return this.args[1];
+    }
 
     constructor(a: Formula, b: Formula, format?: (v: number) => string, name?: string) {
         super();
-        this.a = a;
-        this.b = b;
+        this.args = [a, b];
         this.name = name;
 
-        a.parent = this;
-        b.parent = this;
 
         if (format) {
             this.format = format;
+        } else {
+            this.format = a.format;
         }
     }
 
@@ -277,8 +379,8 @@ export abstract class BinOp extends AFormula {
 export class Plus extends BinOp {
     constructor(a: Formula, b: Formula, name?: string) {
 
-        if (a.format !== b.format) {
-            throw 'Incompatible units:' + a.valueFormatted + ' and ' + b.valueFormatted;
+        if (a.format != b.format) {
+            console.error('Incompatible arguments:' + a.valueFormatted + ' and ' + b.valueFormatted);
         }
 
         super(a, b, a.format);
@@ -287,8 +389,9 @@ export class Plus extends BinOp {
     }
 
     get value(): number {
-        return this.a.value + this.b.value;
+        return this.args[0].value + this.args[1].value;
     }
+
     public equation(maxDepth?: number): string {
         if (maxDepth < 1 || this.terminal) {
             return this.valueFormatted;
@@ -298,13 +401,10 @@ export class Plus extends BinOp {
 
     public symEquation(maxDepth?: number): string {
         if (maxDepth < 1 || this.terminal) {
-            return this.name;
+            return this.name ? this.name : this.valueFormatted;
         }
-        if (this.parent) {
-            return super.braket(super.symEquation(maxDepth));
-        } else {
-            return super.symEquation(maxDepth);
-        }
+
+        return super.braket(super.symEquation(maxDepth));
     }
 }
 
@@ -314,8 +414,9 @@ export class Minus extends Plus {
         super(a, b, name);
         this.op = '-';
     }
+
     get value(): number {
-        return this.a.value - this.b.value;
+        return this.args[0].value - this.args[1].value;
     }
 }
 
@@ -327,7 +428,7 @@ export class Div extends BinOp {
     }
 
     get value(): number {
-        return this.a.value / this.b.value;
+        return this.args[0].value / this.args[1].value;
     }
 
 }
@@ -338,8 +439,9 @@ export class Mul extends BinOp {
         super(a, b, format, name);
         this.op = '×';
     }
+
     get value(): number {
-        return this.a.value * this.b.value;
+        return this.args[0].value * this.args[1].value;
     }
 }
 

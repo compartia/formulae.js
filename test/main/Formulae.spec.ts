@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { Constant, Plus } from '../../src/main/Formulae';
+import { Constant, Plus } from '../../src/formulae';
 
 
 describe('Formulae Test', () => {
@@ -17,10 +17,24 @@ describe('Formulae Test', () => {
     expect(c.value).to.equal(2);
   });
 
-
   it('Should return 5', () => {
     const f: Plus = new Plus(a1, a2);
     expect(f.value).to.equal(5);
+  });
+
+  it('Should return 5', () => {
+    const f = a1.plus(a2);
+    expect(f.value).to.equal(5);
+  });
+
+  it('Should return 6', () => {
+    const f = a1.mul(a2);
+    expect(f.value).to.equal(6);
+  });
+
+  it('Should return 1.5', () => {
+    const f = a2.div(a1);
+    expect(f.value).to.equal(1.5);
   });
 
 });
