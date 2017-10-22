@@ -45,6 +45,6 @@
     "mocha-clean": "^1.0.0",
     "ts-node": "^3.0.4",
     "typescript": "2.4.1",
-    "typescript-eslint-parser": "4.0.0"
+    "typescript-eslint-parser": "8.0.1"
   }
 }
